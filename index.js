@@ -10,15 +10,21 @@ var EventEmitter = require('events').EventEmitter
 var inherits = require('inherits')
 
 
-
-
 var link_lists = {}
 var history_initialized = false
 
 inherits(CacheP2P, EventEmitter)
 
-function CacheP2P(opts){
+var cached_mark 
+function CacheP2P(opts, callback){
+  if(typeof(opts)==='function'){
+    callback = opts
+  }
+  if(document.security_sha2){
+    self.security_sha1 = document.security_sha1
+  }
   var self = this
+  cached_mark = opts && opts.cached_mark ? opts.cached_mark : "* ";
   if (!(self instanceof CacheP2P)) return new CacheP2P(opts)
   EventEmitter.call(self)
   self.emit("message", "Initializing CacheP2P...")
@@ -35,6 +41,9 @@ function CacheP2P(opts){
   [ 'wss://tracker.btorrent.xyz' ],
   [ 'wss://tracker.openwebtorrent.com' ],
   ]
+  if(opts && opts.announceList){
+    self.announceList = opts.announceList
+  }
 
   function onTorrent (torrent) {
     torrent.files.forEach(function (file) {
@@ -49,7 +58,10 @@ function CacheP2P(opts){
         link_lists[got_page.url].title = got_page.title
         link_lists[got_page.url].url = got_page.url
         var link_to_page = link_lists[got_page.url].orig
-        self.emit('success', "Got cache for '" +link_to_page.text+"', it will not be requested to the Server when clicked on it.")
+        self.emit('alert', "Checking sha1 of content received: "+sha.sync(got_page.page)+"...")
+        
+        self.emit('success', "Got this site's '" +link_to_page.text+"' from another Peer (sha1: "+got_page.page_hash+" ✔)")
+        self.emit('success', "The server will not be used when '"+link_to_page.text+"' is clicked.")
         
         link_to_page.onclick = function(event){
           event.preventDefault();
@@ -57,24 +69,34 @@ function CacheP2P(opts){
             window.history.pushState({page: document.documentElement.innerHTML, title: document.title},"", window.location.href);
           }
           document.documentElement.innerHTML = link_lists[event.target.href].content
-          document.title = '* '+link_lists[event.target.href].title
-          window.scrollTo(0, 0);
+          document.title = cached_mark+' '+link_lists[event.target.href].title
+          // setTimeout(function(){
+          //   window.scrollTo(0, 0);
+            
+          // }, 10)
+          self.emit('cache', event)
+          self.emit('ready')
+          
           window.history.pushState({page: got_page.page, title: got_page.title},"", got_page.url);
         }
 
         window.onpopstate = function(to) {
           document.documentElement.innerHTML = to.state.page
-          document.title = '* '+to.state.title
+          document.title = cached_mark+" "+to.state.title
           window.scrollTo(0, 0);
-
+          self.emit('onpopstate', to)
+          
           var this_page_links = document.getElementsByTagName('a')
           for(var i = 0; i < this_page_links.length ; i++){
             if(Object.keys(link_lists).indexOf(this_page_links[i].href) > -1){
               this_page_links[i].onclick = function(event){
                 event.preventDefault();
                 document.documentElement.innerHTML = link_lists[event.target.href].content
-                document.title = '* '+link_lists[event.target.href].title
+                document.title = cached_mark+' '+link_lists[event.target.href].title
                 window.history.pushState({page: link_lists[event.target.href].content, title: link_lists[event.target.href].title},"", event.target.href);
+                setTimeout(function(){
+                  window.scrollTo(0, 0);
+                }, 10)
               }
             }
           }
@@ -86,16 +108,16 @@ function CacheP2P(opts){
   setTimeout(function(){
     var this_page_links = document.getElementsByTagName('a')
     
-    self.emit('message', "Searching this page for links *://"+document.domain + "/* to optimize.")
+    self.emit('message', "Initializing CacheP2P, pre-fetching all links in this website... ")
     
     for(var i = 0; i < this_page_links.length ; i++){
-      if(this_page_links[i].href && this_page_links[i].href.length !== window.location.href.length && this_page_links[i].href.indexOf(window.location.href+'#') == -1 && this_page_links[i].href.indexOf(window.location.href) > -1){
+      if(this_page_links[i].href && this_page_links[i].href.length !== window.location.href.length && this_page_links[i].href.indexOf(window.location.href+'#') == -1 && this_page_links[i].href.indexOf(document.domain) > -1){
         if(!link_lists[this_page_links[i].href]){
           link_lists[this_page_links[i].href] = {}
         }
         link_lists[this_page_links[i].href].orig = this_page_links[i]
-        self.emit('message', "Found '"+this_page_links[i].text + "' link and it's in the same domain, so it can be optimized with CacheP2P.")
-        self.emit('message', "Please tell a friend to open this site's "+this_page_links[i].text+" to see CacheP2P in action.")
+        self.emit('message', "Pre-fetching '"+this_page_links[i].text + "' page from other peers browsing this website...")
+        self.emit('alert', "Please tell a friend to open this site's "+this_page_links[i].text+" to see it in action.")
         
         sha(this_page_links[i].href, function(result){
           
@@ -108,8 +130,7 @@ function CacheP2P(opts){
             self.emit('webtorrent', 'Receiving ('+bytes+' bytes)')
           })
           torrent.on('wire', function (wire) {
-            console.log('wire', wire)
-            self.emit('webtorrent', 'Peer '+wire.peerId+' ('+wire.remoteAddress+') is connected over '+wire.type+'.')
+            self.emit('webtorrent', 'Peer ('+wire.remoteAddress+') connected over '+wire.type+' (Connection ID: '+wire.peerId.substr(0,10)+').')
           })
         })
 
@@ -149,7 +170,8 @@ function CacheP2P(opts){
       sha(mergedPage, function (page_hash) {
         var payload = {date: new Date(), page: mergedPage, page_hash: page_hash, url: message.location_href, title: document.title}
         var buffer_payload = Buffer.from(JSON.stringify(payload), 'utf8')
-        debug('>> url hash:', hash, 'for', message.location_href)
+        self.emit('ready')
+        console.log('[CacheP2P] this page\'s security hash:',page_hash,'('+message.location_href+')')
         var torrent = client.seed(buffer_payload,{forced_id: hash, announceList: self.announceList}, function(torrent){
             // add_to_list(torrent, message.location_href)
             debug(torrent.magnetURI)
@@ -157,8 +179,8 @@ function CacheP2P(opts){
               self.emit('webtorrent', 'Sending this page to peer ('+bytes+' bytes)')
             })
             torrent.on('wire', function (wire) {
-              console.log('wire', wire)
-              self.emit('webtorrent', 'Peer '+wire.peerId+' connected ('+wire.remoteAddress+') over '+wire.type+'.')
+              console.log('wire2', wire)
+              self.emit('webtorrent', 'Peer ('+wire.remoteAddress+') connected over '+wire.type+' (Connection ID: '+wire.peerId.substr(0,10)+').')
             })
             // document.title = document.title
         });
@@ -169,7 +191,7 @@ function CacheP2P(opts){
 }
 
 
-document.CacheP2P = new CacheP2P()
-client.on('error', function(err){
-  document.CacheP2P.emit('webtorrent', err)
-})
+// document.CacheP2P = new CacheP2P()
+// client.on('error', function(err){
+//   document.CacheP2P.emit('webtorrent', err)
+// })
