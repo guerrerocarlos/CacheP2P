@@ -10,9 +10,9 @@
 
 <br>
 
-**CacheP2P** is a [caching][https://en.wikipedia.org/Cache] mechanism torrent client for **node.js** and the **browser**. YEP,
-THAT'S RIGHT. THE BROWSER. It's written completely in JavaScript – the language of the web
-– so the same code works in both runtimes.
+**CacheP2P** is a [cache][https://en.wikipedia.org/wiki/Cache_(computing)] system based on [WebTorrent][https://webtorrent.io/] and runs only in the **browser**.
+
+It works making every user a mirror of the webpage he has opened and allows it to serve it to other users that also are using the same website.
 
 
 ### License
