@@ -1,7 +1,7 @@
 {
   "name": "cachep2p",
-  "description": "The Peer to Peer for the Masses",
-  "version": "0.1.0",
+  "description": "The Peer to Peer Cache for the Masses",
+  "version": "0.1.1",
   "author": {
     "name": "Carlos Guerrero",
     "email": "carlos@carlosguerrero.com",
