@@ -1,12 +1,10 @@
 <h1 align="center">
   <br>
   <br>
-  P2PCache
+  CacheP2P
   <br>
   <br>
 </h1>
-
-<h4 align="center">The Cache for the new Internet.</h4>
 
 <br>
 
