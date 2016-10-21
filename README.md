@@ -12,9 +12,12 @@
 
 It is a javascript library that once included in a website, makes every new user a mirror of the specific URL he has opened and allows it to serve it to all the other users that also are accessing the same website, so the website's server doesn't have to. 
 
-This way users can share the content between themselves, and even if the website crashes or goes offline, all the content can be found online (on the CacheP2P) and as long as there are users accessing it will not dissapear from Internet.
+This way users can share the content between themselves, reducing the number of requests for estatic content to the server.
 
+If the website crashes or has problems (the script can be included in the server's error page), all the content that users were accessing in that moment can be retrieved from one another and as long as there are users accessing it no problem will be seen.
+
+For more information, please read the [documentation](http://www.cachep2p.com/documentation.html) or [how it works](http://www.cachep2p.com/api.html) page.
 
 ### License
 
-MIT. Copyright (c) [CacheP2P, LLC](https://www.CacheP2P.com)
+MIT. Copyright (c) [CacheP2P](https://www.CacheP2P.com)

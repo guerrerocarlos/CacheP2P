@@ -96,7 +96,7 @@ function CacheP2P(opts, callback){
         if(all_links[i].href === got_page.url){
           console.log('found link that points to url', each_url)
           var link_to_page = all_links[i]
-          self.emit('alert', "Checking sha1 of content received: "+sha.sync(got_page.page)+"...")
+          self.emit('alert', "Security check of content received: "+sha.sync(got_page.page)+"...")
           self.emit('success', "Got this site's '" +all_links[i].text+"' in Cache (sha1: "+got_page.page_hash+" ✔)")
           self.emit('success', "The main server will not be used when '"+link_to_page.text+"' is clicked.")
           
@@ -191,7 +191,7 @@ function CacheP2P(opts, callback){
               self.emit('webtorrent', 'Sending this page to peer ('+bytes+' bytes)')
             })
             torrent.on('wire', function (wire) {
-              self.emit('webtorrent', 'Peer ('+wire.remoteAddress+') connected over '+wire.type+' (Connection ID: '+wire.peerId.substr(0,10)+').')
+              self.emit('webtorrent', 'Peer ('+wire.remoteAddress+') connected over '+wire.type+'.')
             })
             // document.title = document.title
         });
