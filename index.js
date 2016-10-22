@@ -17,10 +17,10 @@ var history_initialized = false
 
 inherits(CacheP2P, EventEmitter)
 
-var cached_mark 
+var cached_mark
 function CacheP2P(opts, callback){
   var self = this
-  
+
   if(typeof(opts)==='function'){
     callback = opts
   }
@@ -55,7 +55,7 @@ function CacheP2P(opts, callback){
         self.emit('alert', "Please tell a friend to open this site's "+page_link.text+" to see it in action.")
         added_links.push(page_link.href)
         sha(page_link.href, function(result){
-          
+
           var magnet = 'magnet:?xt=urn:btih:'+result+'&dn=Unnamed+Torrent+1476541118022&tr=udp%3A%2F%2Fexodus.desync.com%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.internetwarriors.net%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=wss%3A%2F%2Ftracker.openwebtorrent.com'
           torrent = client.add(magnet, onTorrent)
 
@@ -70,26 +70,26 @@ function CacheP2P(opts, callback){
           })
         })
       }
-    } 
+    }
   }
   self.scan_links = function(){
     self.emit('message', "Pre-fetching uncached links in this page... ")
-    var this_page_links = document.getElementsByTagName('a')    
+    var this_page_links = document.getElementsByTagName('a')
     for(var i = 0; i < this_page_links.length ; i++){
       if(this_page_links[i].href && this_page_links[i].href.length !== window.location.href.length && this_page_links[i].href.indexOf(window.location.href+'#') == -1 && this_page_links[i].href.indexOf(document.domain) > -1){
         if(!document.security_sha1 || Object.keys(document.security_sha1).indexOf(this_page_links[i].href) > -1){
           if(Object.keys(cached_link_lists).indexOf(this_page_links[i].href) === -1){
             self.fetch(this_page_links[i])
           }
-        } 
+        }
       }
     }
     self.update_links()
   }
 
   self.update_links = function(){
-    var all_links = document.getElementsByTagName('a') 
-    
+    var all_links = document.getElementsByTagName('a')
+
     Object.keys(cached_link_lists).forEach(function(each_url){
       var got_page = cached_link_lists[each_url]
       for(var i = 0 ; i < all_links.length ; i++ ){
@@ -99,7 +99,7 @@ function CacheP2P(opts, callback){
           self.emit('alert', "Security check of content received: "+sha.sync(got_page.page)+"...")
           self.emit('success', "Got this site's '" +all_links[i].text+"' in Cache (sha1: "+got_page.page_hash+" ✔)")
           self.emit('success', "The main server will not be used when '"+link_to_page.text+"' is clicked.")
-          
+
           link_to_page.onclick = function(event){
             event.preventDefault();
             if(!history_initialized){
@@ -109,18 +109,18 @@ function CacheP2P(opts, callback){
             document.title = cached_mark+' '+cached_link_lists[event.target.href].title
             // setTimeout(function(){
             //   window.scrollTo(0, 0);
-              
+
             // }, 10)
             self.emit('cache', event)
             self.emit('ready')
             self.scan_links()
-            
+
             window.history.pushState({page: got_page.page, title: got_page.title},"", got_page.url);
           }
         }
       }
     })
-  }  
+  }
 
   function onTorrent (torrent) {
     torrent.files.forEach(function (file) {
@@ -129,42 +129,50 @@ function CacheP2P(opts, callback){
         // debug(b)
         // debug(b.toString('utf8'))
         var got_page = JSON.parse(b.toString('utf8'))
-        // self.emit('message', "Got cached version of "+got_page.url+" from web peer, modifying link to point to cache.")
-        
-        cached_link_lists[got_page.url] = got_page
-        self.update_links()
+        // self.emit('message', "Got cached version of "+got_page.url+" from web peer, checking security hash.")
 
-        window.onpopstate = function(to) {
-          document.documentElement.innerHTML = to.state.page
-          document.title = cached_mark+" "+to.state.title
-          window.scrollTo(0, 0);
-          self.emit('onpopstate', to)
-          
-          var this_page_links = document.getElementsByTagName('a')
-          for(var i = 0; i < this_page_links.length ; i++){
-            if(Object.keys(cached_link_lists).indexOf(this_page_links[i].href) > -1){
-              this_page_links[i].onclick = function(event){
-                event.preventDefault();
-                document.documentElement.innerHTML = cached_link_lists[event.target.href].page
-                document.title = cached_mark+' '+cached_link_lists[event.target.href].title
-                window.history.pushState({page: cached_link_lists[event.target.href].page, title: cached_link_lists[event.target.href].title},"", event.target.href);
-                setTimeout(function(){
-                  window.scrollTo(0, 0);
-                }, 10)
+        sha(got_page.page, function (page_hash) {
+          if (page_hash != self.security_sha1[got_page.url]) {
+            self.emit('message', 'Cached version of ' + got_page.url + ' has wrong security hash. This is possibly malicious content! Ignoring the version obtained.');
+            return;
+          }
+
+          self.emit('message', 'Cached version of ' + got_page.url + ' has a verified security hash! Proceeding by changing links in page.');
+          cached_link_lists[got_page.url] = got_page
+          self.update_links()
+
+          window.onpopstate = function(to) {
+            document.documentElement.innerHTML = to.state.page
+            document.title = cached_mark+" "+to.state.title
+            window.scrollTo(0, 0);
+            self.emit('onpopstate', to)
+
+            var this_page_links = document.getElementsByTagName('a')
+            for(var i = 0; i < this_page_links.length ; i++){
+              if(Object.keys(cached_link_lists).indexOf(this_page_links[i].href) > -1){
+                this_page_links[i].onclick = function(event){
+                  event.preventDefault();
+                  document.documentElement.innerHTML = cached_link_lists[event.target.href].page
+                  document.title = cached_mark+' '+cached_link_lists[event.target.href].title
+                  window.history.pushState({page: cached_link_lists[event.target.href].page, title: cached_link_lists[event.target.href].title},"", event.target.href);
+                  setTimeout(function(){
+                    window.scrollTo(0, 0);
+                  }, 10)
+                }
+              } else {
+                self.fetch(this_page_links[i])
               }
-            } else {
-              self.fetch(this_page_links[i])
             }
           }
-        }
+        });
       })
     })
   }
 
   setTimeout(function(){
-    
+
     self.emit('message', "Initializing CacheP2P")
-    
+
     self.scan_links()
 
     var message = {
