@@ -14,6 +14,7 @@ var cached_link_lists = {}
 var all_links = []
 var added_links = []
 var history_initialized = false
+var added_hashes = []
 
 inherits(CacheP2P, EventEmitter)
 
@@ -55,19 +56,21 @@ function CacheP2P(opts, callback){
         self.emit('alert', "Please tell a friend to open this site's "+page_link.text+" to see it in action.")
         added_links.push(page_link.href)
         sha(page_link.href, function(result){
+          if(added_hashes.indexOf(result) === -1){
+            var magnet = 'magnet:?xt=urn:btih:'+result+'&dn=Unnamed+Torrent+1476541118022&tr=udp%3A%2F%2Fexodus.desync.com%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.internetwarriors.net%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=wss%3A%2F%2Ftracker.openwebtorrent.com'
+            torrent = client.add(magnet, onTorrent)
+            added_hashes.push(result)
 
-          var magnet = 'magnet:?xt=urn:btih:'+result+'&dn=Unnamed+Torrent+1476541118022&tr=udp%3A%2F%2Fexodus.desync.com%3A6969&tr=udp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=udp%3A%2F%2Ftracker.internetwarriors.net%3A1337&tr=udp%3A%2F%2Ftracker.leechers-paradise.org%3A6969&tr=udp%3A%2F%2Ftracker.openbittorrent.com%3A80&tr=wss%3A%2F%2Ftracker.openwebtorrent.com'
-          torrent = client.add(magnet, onTorrent)
-
-          torrent.on('done', function (info) {
-            self.emit('webtorrent', 'Cache received')
-          })
-          torrent.on('download', function (bytes) {
-            self.emit('webtorrent', 'Receiving Cache ('+bytes+' bytes)')
-          })
-          torrent.on('wire', function (wire) {
-            self.emit('webtorrent', 'Peer ('+wire.remoteAddress+') connected over '+wire.type+' (Connection ID: '+wire.peerId.substr(0,10)+').')
-          })
+            torrent.on('done', function (info) {
+              self.emit('webtorrent', 'Cache received')
+            })
+            torrent.on('download', function (bytes) {
+              self.emit('webtorrent', 'Receiving Cache ('+bytes+' bytes)')
+            })
+            torrent.on('wire', function (wire) {
+              self.emit('webtorrent', 'Peer ('+wire.remoteAddress+') connected over '+wire.type+' (Connection ID: '+wire.peerId.substr(0,10)+').')
+            })
+          }
         })
       }
     }
@@ -94,7 +97,6 @@ function CacheP2P(opts, callback){
       var got_page = cached_link_lists[each_url]
       for(var i = 0 ; i < all_links.length ; i++ ){
         if(all_links[i].href === got_page.url){
-          console.log('found link that points to url', each_url)
           var link_to_page = all_links[i]
           self.emit('alert', "Security check of content received: "+sha.sync(got_page.page)+"...")
           self.emit('success', "Got this site's '" +all_links[i].text+"' in Cache (sha1: "+got_page.page_hash+" ✔)")
@@ -133,7 +135,7 @@ function CacheP2P(opts, callback){
 
         sha(got_page.page, function (page_hash) {
           if (page_hash != self.security_sha1[got_page.url]) {
-            self.emit('message', 'Cached version of ' + got_page.url + ' has wrong security hash. This is possibly malicious content! Ignoring the version obtained.');
+            self.emit('message', 'Cached version of ' + got_page.url + ' received, has wrong security hash, rejecting it.');
             return;
           }
 
