@@ -1,7 +1,7 @@
 {
   "name": "cachep2p",
   "description": "The Peer to Peer Cache for the Masses",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": {
     "name": "Carlos Guerrero",
     "email": "carlos@carlosguerrero.com",
@@ -19,7 +19,7 @@
   "dependencies": {
     "safe-buffer": "^5.0.1",
     "simple-sha1": "^2.0.8",
-    "webtorrent": "git+https://github.com/guerrerocarlos/webtorrent.git"
+    "webtorrent": "git+https://github.com/guerrerocarlos/webtorrent.git#cachep2p"
   },
   "devDependencies": {
     "browserify": "^13.0.1",
