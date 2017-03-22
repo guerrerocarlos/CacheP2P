@@ -6,4 +6,4 @@
 
 ## Previous versions
 
-We did not maintain a changelog for versions prior to v0.1.0. The initial release of WebTorrent was on 2016-10-16.
+We did not maintain a changelog for versions prior to v0.1.0. The initial release of CacheP2P was on 2016-10-16.
